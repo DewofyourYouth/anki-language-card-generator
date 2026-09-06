@@ -1,0 +1,20 @@
+# Configuration for anki-language-card-generator.
+# Secrets never go in here -- API keys come from the environment (.env).
+
+language: shami
+deck_name: "Shami Vocabulary"
+
+# Where the slug registry lives. Every slug ever issued is recorded here;
+# losing this file means losing the ability to update existing notes in place.
+registry_db_path: "~/.anki_card_gen/registry.db"
+
+# Keys below are read by later slices and are listed here so the shape is
+# visible. Model slugs are deliberately left blank -- verify current
+# identifiers against openrouter.ai rather than trusting a default.
+#
+# anki_model_id:      # fixed per deck, do not regenerate once shipped
+# anki_deck_id:
+# llm_model: ""
+# image_model: ""
+# style_directives: ""
+# image_cap_per_run: 10

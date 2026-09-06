@@ -216,3 +216,7 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Real lesson notes are personal content and this repo is public.
+# Ship fixtures under tests/fixtures/ instead of real notes.
+/lessons/

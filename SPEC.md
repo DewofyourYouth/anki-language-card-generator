@@ -68,6 +68,27 @@ The LLM path is also responsible for producing gender variants (§4) when an
 entry's text marks the speaker's gender. Generated Arabic is never used
 unreviewed — that is precisely what the `entries.yaml` checkpoint is for.
 
+**Implemented 2026-09-06.** `pipeline.extract_to_yaml()` tries the fast path
+(`parsing.parse_file`) first and only falls back to the LLM
+(`extraction.extract_entries`) if it declines. One call, structured JSON
+output requested via `response_format` so parsing doesn't depend on the model
+reliably following free-text instructions. A malformed individual entry in
+the model's response is dropped and logged rather than failing the whole
+batch — you already paid for the call, and losing 1 bad entry out of 30 good
+ones to a strict all-or-nothing parse would waste the other 29. Re-running
+`extract_to_yaml` onto an existing `entries.yaml` is refused unless
+`force=True`, on both paths — protects review state, and on the LLM path also
+avoids paying twice for an accidental rerun.
+
+Real lesson input (RTF export from Apple Notes/Pages) surfaced two things not
+in the original guess: `.rtf` needs a decode step before either path can read
+it (done via macOS's `textutil`, a subprocess call rather than a new
+dependency — the tool is macOS-only in practice regardless), and `.pages`
+cannot be read locally at all — it's a zip of Apple's undocumented IWA/
+protobuf format with no maintained parser. `.pages` is rejected with a message
+telling the user to export to `.txt`/`.rtf`/`.md` instead of chasing an
+obscure dependency for it.
+
 ## 4. `entries.yaml` — review checkpoint
 
 One YAML document per pipeline-1 run, human-editable before continuing.
@@ -352,6 +373,10 @@ Resolved 2026-09-06:
 
 4b. §8 — official `anki` package evaluated and rejected: cannot set notetype
    or deck IDs. See §8.
+4c. §3 — LLM extraction **implemented**: fast path first, one structured-output
+   call as fallback, drop-and-warn on malformed entries, overwrite guard on
+   `entries.yaml` (`force=True` required). `.rtf` supported via `textutil`;
+   `.pages` explicitly rejected (no local parser exists). See §3.
 
 Still open:
 

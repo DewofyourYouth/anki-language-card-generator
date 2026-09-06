@@ -15,11 +15,19 @@ anki_model_id: 2040212950
 anki_deck_id: 1678772260
 note_type_name: "Shami Card"
 
+# LLM used for the extraction fallback (SPEC section 3) -- only called when
+# a lesson file doesn't parse as a clean structured table. Left blank
+# deliberately: extract_to_yaml refuses to run without it set, rather than
+# silently defaulting to a slug that may be stale or mispriced by the time you
+# read this. Verify current model availability and pricing at openrouter.ai
+# before setting it -- as examples only, not defaults, anthropic/claude-fable-5.1
+# and google/gemini-3.8-flash both supported structured JSON output as of
+# 2026-09-06.
+llm_model: ""
+
 # Keys below are read by later slices and are listed here so the shape is
-# visible. Model slugs are deliberately left blank -- verify current
-# identifiers against openrouter.ai rather than trusting a default.
+# visible.
 #
-# llm_model: ""
 # image_model: ""
 # style_directives: ""
 # image_cap_per_run: 10

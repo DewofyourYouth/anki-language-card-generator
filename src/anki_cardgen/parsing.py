@@ -14,12 +14,29 @@ be spotted by eye at the review checkpoint, so ambiguity always resolves to
 
 import csv
 import io
+import shutil
+import subprocess
 from pathlib import Path
 from typing import Any
 
 import yaml
 
 from .entries import Entry, EntryDocument, SpeakerGender, Variant
+
+#: Extensions that need a conversion step before they are plain text.
+#: Anything not listed here (.txt, .md, .csv, .tsv, .yaml, .yml, no suffix) is
+#: read as UTF-8 directly.
+_RTF_SUFFIXES = {".rtf"}
+
+#: Extensions known to be unreadable without proprietary tooling this project
+#: will not depend on. Named explicitly so the error tells the user what to do
+#: instead of a raw UnicodeDecodeError from trying to read them as UTF-8.
+_UNSUPPORTED_SUFFIXES = {
+    ".pages": "Pages",
+    ".docx": "Word",
+    ".doc": "Word",
+    ".odt": "OpenDocument",
+}
 
 #: Column names understood in a delimited file's header row.
 COLUMNS = {
@@ -49,6 +66,45 @@ _DELIMITERS = {".csv": ",", ".tsv": "\t"}
 _HEADER_CONFIDENCE = 0.75
 
 
+def read_lesson_text(path: str | Path) -> str:
+    """Return the plain-text content of a lesson file, converting if needed.
+
+    Text and delimited formats are read directly. `.rtf` is converted via
+    macOS's built-in `textutil` -- a subprocess call rather than a new
+    dependency, since it ships with the OS and this is a personal tool that
+    runs on one machine. Formats with no practical local parser (`.pages` is a
+    zip of Apple's undocumented IWA/protobuf format; there is no maintained
+    library for it) are rejected with a message naming the fix, rather than
+    failing deep inside a decode error.
+    """
+    path = Path(path).expanduser()
+    suffix = path.suffix.lower()
+
+    if suffix in _UNSUPPORTED_SUFFIXES:
+        kind = _UNSUPPORTED_SUFFIXES[suffix]
+        raise ValueError(
+            f"{path} is a {kind} file, which has no local text extraction "
+            f"available. Export it to .txt, .rtf, or .md first."
+        )
+
+    if suffix in _RTF_SUFFIXES:
+        if shutil.which("textutil") is None:
+            raise ValueError(
+                f"{path} is an RTF file; converting it requires macOS's "
+                f"`textutil`, which was not found on this system. Export the "
+                f"lesson to .txt instead."
+            )
+        result = subprocess.run(
+            ["textutil", "-convert", "txt", "-stdout", str(path)],
+            capture_output=True, text=True, encoding="utf-8",
+        )
+        if result.returncode != 0:
+            raise ValueError(f"failed to convert {path}: {result.stderr.strip()}")
+        return result.stdout
+
+    return path.read_text(encoding="utf-8")
+
+
 def parse_file(path: str | Path, language: str) -> EntryDocument | None:
     """Parse ``path`` if it is already structured; return ``None`` if freeform.
 
@@ -57,7 +113,7 @@ def parse_file(path: str | Path, language: str) -> EntryDocument | None:
     `.md` should quietly decline rather than being forced into columns.
     """
     path = Path(path).expanduser()
-    text = path.read_text(encoding="utf-8")
+    text = read_lesson_text(path)
     suffix = path.suffix.lower()
     source = str(path)
 

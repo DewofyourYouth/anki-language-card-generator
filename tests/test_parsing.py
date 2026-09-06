@@ -5,10 +5,15 @@ while claiming a freeform file mangles a lesson into garbage entries. Every
 ambiguous case must resolve to "freeform".
 """
 
+import shutil
+import subprocess
+
 import pytest
 
 from anki_cardgen.entries import SpeakerGender
-from anki_cardgen.parsing import parse_delimited, parse_file, parse_yaml
+from anki_cardgen.parsing import parse_delimited, parse_file, parse_yaml, read_lesson_text
+
+HAS_TEXTUTIL = shutil.which("textutil") is not None
 
 FREEFORM = """\
 # Lesson 3 notes
@@ -149,3 +154,87 @@ class TestYaml:
     def test_source_is_recorded(self, tmp_path):
         path = write(tmp_path, "v.csv", "كيفك,how are you\n")
         assert parse_file(path, "shami").source == str(path)
+
+
+class TestReadLessonText:
+    def test_plain_text_is_read_directly(self, tmp_path):
+        path = write(tmp_path, "v.txt", "hello كيفك")
+        assert read_lesson_text(path) == "hello كيفك"
+
+    def test_delimited_extensions_are_read_directly(self, tmp_path):
+        path = write(tmp_path, "v.csv", "a,b\n")
+        assert read_lesson_text(path) == "a,b\n"
+
+    def test_pages_is_rejected_with_an_actionable_message(self, tmp_path):
+        path = tmp_path / "v.pages"
+        path.write_bytes(b"PK\x03\x04")  # a zip signature is enough; never reached
+        with pytest.raises(ValueError, match="Export it to .txt, .rtf, or .md"):
+            read_lesson_text(path)
+
+    def test_docx_is_rejected_too(self, tmp_path):
+        path = tmp_path / "v.docx"
+        path.write_bytes(b"PK\x03\x04")
+        with pytest.raises(ValueError, match="Word file"):
+            read_lesson_text(path)
+
+    @pytest.mark.skipif(not HAS_TEXTUTIL, reason="textutil not available on this system")
+    def test_rtf_is_converted_to_plain_text(self, tmp_path):
+        converted = subprocess.run(
+            ["textutil", "-convert", "rtf", "-stdin", "-stdout", "-format", "txt"],
+            input="hello كيفك".encode("utf-8"), capture_output=True, check=True,
+        )
+        path = tmp_path / "v.rtf"
+        path.write_bytes(converted.stdout)
+
+        text = read_lesson_text(path)
+        assert "hello" in text
+        assert "كيفك" in text
+        assert r"\rtf1" not in text
+
+    def test_rtf_without_textutil_available_gives_actionable_error(self, tmp_path, monkeypatch):
+        monkeypatch.setattr("shutil.which", lambda name: None)
+        path = write(tmp_path, "v.rtf", "irrelevant -- fails before being read as RTF")
+        with pytest.raises(ValueError, match="Export the lesson to .txt"):
+            read_lesson_text(path)
+
+    def test_rtf_conversion_failure_surfaces_stderr(self, tmp_path, monkeypatch):
+        def fake_run(*args, **kwargs):
+            return subprocess.CompletedProcess(args, returncode=1, stdout="", stderr="boom")
+        monkeypatch.setattr("subprocess.run", fake_run)
+
+        path = write(tmp_path, "v.rtf", "irrelevant")
+        with pytest.raises(ValueError, match="boom"):
+            read_lesson_text(path)
+
+    def test_parse_file_uses_read_lesson_text_for_rtf(self, tmp_path):
+        """The fast path must see decoded text too, not just extraction. Like
+        .md/.txt, .rtf doesn't self-announce as structured, so (matching
+        test_headerless_table_in_md_is_not_claimed) it only gets claimed with
+        an explicit header row."""
+        if not HAS_TEXTUTIL:
+            pytest.skip("textutil not available on this system")
+        converted = subprocess.run(
+            ["textutil", "-convert", "rtf", "-stdin", "-stdout", "-format", "txt"],
+            input="target,translation\nكيفك,how are you\n".encode("utf-8"),
+            capture_output=True, check=True,
+        )
+        path = tmp_path / "v.rtf"
+        path.write_bytes(converted.stdout)
+
+        doc = parse_file(path, "shami")
+        assert doc is not None
+        assert doc.entries[0].target == "كيفك"
+
+    def test_rtf_without_a_header_is_left_to_the_llm(self, tmp_path):
+        """The realistic case: real lesson RTF is prose, not a table, and must
+        fall through to extraction rather than being force-parsed."""
+        if not HAS_TEXTUTIL:
+            pytest.skip("textutil not available on this system")
+        converted = subprocess.run(
+            ["textutil", "-convert", "rtf", "-stdin", "-stdout", "-format", "txt"],
+            input="كيفك,how are you\n".encode("utf-8"), capture_output=True, check=True,
+        )
+        path = tmp_path / "v.rtf"
+        path.write_bytes(converted.stdout)
+
+        assert parse_file(path, "shami") is None

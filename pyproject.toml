@@ -4,6 +4,7 @@ version = "0.1.0"
 description = "Turn raw vocabulary lists or lesson notes into a finished Anki deck."
 requires-python = ">=3.14"
 dependencies = [
+    "genanki>=0.13.1",
     "pyyaml>=6.0",
 ]
 
@@ -21,3 +22,11 @@ packages = ["src/anki_cardgen"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+filterwarnings = [
+    "error",
+    # genanki 0.13.1 depends on the `cached-property` backport, which calls
+    # asyncio.iscoroutinefunction -- deprecated, and slated for removal in
+    # Python 3.16. Not our code and not fixable from here; downgraded from the
+    # `error` above so a real warning in our own code still fails the suite.
+    "default::DeprecationWarning:cached_property",
+]

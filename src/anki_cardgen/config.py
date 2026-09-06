@@ -27,7 +27,10 @@ class Config:
 
     language: str
     deck_name: str
+    anki_model_id: int
+    anki_deck_id: int
     registry_db_path: Path
+    note_type_name: str = "Language Card"
     raw: dict[str, Any] = field(default_factory=dict, repr=False)
 
     @classmethod
@@ -45,12 +48,28 @@ class Config:
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> Config:
-        missing = [key for key in ("language", "deck_name") if not data.get(key)]
+        required = ("language", "deck_name", "anki_model_id", "anki_deck_id")
+        missing = [key for key in required if not data.get(key)]
         if missing:
             raise ValueError(f"config is missing required key(s): {', '.join(missing)}")
+
+        # Anki keys note types and decks by these ids. Regenerating one does not
+        # error -- it silently creates a second, parallel note type or deck and
+        # orphans every existing card, so they are validated as integers here
+        # rather than coerced from whatever YAML happened to produce.
+        ids = {}
+        for key in ("anki_model_id", "anki_deck_id"):
+            value = data[key]
+            if not isinstance(value, int) or isinstance(value, bool):
+                raise ValueError(f"config {key} must be an integer, got {value!r}")
+            ids[key] = value
+
         return cls(
             language=str(data["language"]),
             deck_name=str(data["deck_name"]),
+            anki_model_id=ids["anki_model_id"],
+            anki_deck_id=ids["anki_deck_id"],
+            note_type_name=str(data.get("note_type_name") or "Language Card"),
             registry_db_path=Path(
                 str(data.get("registry_db_path") or DEFAULT_REGISTRY_PATH)
             ).expanduser(),

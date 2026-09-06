@@ -187,10 +187,26 @@ updates it rather than creating a parallel one in Anki.
 
 ## 8. `.apkg` construction
 
-**Decided 2026-09-06: `genanki` approved as a dependency.** Pure Python, no
-network, and the alternative is hand-rolling a writer for Anki's SQLite+zip
-format — putting deck-corruption risk on new code rather than on a library
-many thousands of decks have been built with.
+**Decided 2026-09-06: `genanki`.** Pure Python, three transitive deps, no
+network.
+
+The official `anki` package was evaluated and **rejected on capability, not
+weight**. It is far better maintained (26.8.1, Aug 2026, vs genanki 0.13.1,
+Nov 2023) but it will not let a caller choose notetype or deck IDs: the Rust
+backend asserts `id == 0` when adding a notetype and panics on anything else,
+and rewriting the id afterwards fails with `NotFoundError`. IDs are
+timestamp-derived and backend-assigned. Note GUIDs *are* settable, so invariant
+#2 would have survived — but §7/§11 require stable model/deck IDs so a weekly
+re-import updates the same deck and note type instead of accumulating parallel
+copies. Working around it means exporting via `anki` and then hand-rewriting
+IDs in the resulting SQLite, i.e. hand-rolling precisely the part the library
+was chosen to get right.
+
+Known risk accepted: genanki depends on the `cached-property` backport, which
+calls `asyncio.iscoroutinefunction` — slated for removal in Python 3.16. The
+suite runs `-W error` with that one third-party deprecation downgraded. If
+genanki is still unmaintained by then, the fix is a `uv` dependency override or
+a small shim, not a rewrite.
 
 Its output is nonetheless validated independently: tests unzip the built
 `.apkg` and assert against the embedded SQLite directly, never trusting the
@@ -333,6 +349,9 @@ Resolved 2026-09-06:
 2. §7 — transliteration stays a **visible field**, plus gender-variant fields.
 3. §8 — `genanki` **approved**.
 4. §9 — two voices, ~50-50 by slug-hash parity, voice in the cache key.
+
+4b. §8 — official `anki` package evaluated and rejected: cannot set notetype
+   or deck IDs. See §8.
 
 Still open:
 

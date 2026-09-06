@@ -8,12 +8,17 @@ deck_name: "Shami Vocabulary"
 # losing this file means losing the ability to update existing notes in place.
 registry_db_path: "~/.anki_card_gen/registry.db"
 
+# Anki keys the note type and deck by these ids. NEVER regenerate them: Anki
+# does not error on a changed id, it silently creates a second parallel note
+# type or deck and orphans every card you already have.
+anki_model_id: 2040212950
+anki_deck_id: 1678772260
+note_type_name: "Shami Card"
+
 # Keys below are read by later slices and are listed here so the shape is
 # visible. Model slugs are deliberately left blank -- verify current
 # identifiers against openrouter.ai rather than trusting a default.
 #
-# anki_model_id:      # fixed per deck, do not regenerate once shipped
-# anki_deck_id:
 # llm_model: ""
 # image_model: ""
 # style_directives: ""

@@ -19,8 +19,6 @@ rather than blocking a run that may be legitimate (homographs, or the same word
 deliberately drilled in two contexts).
 """
 
-from __future__ import annotations
-
 import logging
 import sqlite3
 from dataclasses import dataclass

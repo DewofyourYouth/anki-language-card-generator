@@ -155,9 +155,19 @@ Fields:
 - `Translation`
 - `TargetAlt` / `TranslitAlt` — the opposite-gender form, empty when
   `speaker_gender: any`
-- `SpeakerGender` — `male`, `female`, or `any`; drives labelling on the back
+- `FormLabel` / `AltLabel` — `m.`/`f.` labels for the two forms, empty when
+  unmarked
+- `SpeakerGender` — `male`, `female`, or `any`
+- `Notes` — usage notes from the entry, shown on the back
 - `Audio` — `[sound:...]` reference, embedded media
 - `Mnemonic` — image reference, **back template only**
+
+`FormLabel`/`AltLabel` are precomputed in Python rather than derived from
+`SpeakerGender` in the template because Anki's template language can only
+branch on whether a field is *empty*, not on what it contains — there is no way
+to write "if SpeakerGender is male". The alternative is the usual Anki hack of
+carrying two mutually-exclusive marker fields purely to drive conditionals,
+which is harder to read in the note editor than just storing the label.
 
 Front shows `Target` only — the single form that matches the audio. Showing
 both genders on the prompt face would make the card a reading exercise rather

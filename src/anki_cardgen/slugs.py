@@ -6,8 +6,6 @@ input always produces the same slug and hash regardless of database state,
 which is what makes the GUID stability guarantee testable.
 """
 
-from __future__ import annotations
-
 import hashlib
 import re
 import unicodedata

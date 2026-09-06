@@ -5,8 +5,6 @@ the same tool works for a different language without code changes. Secrets are
 never in here -- API keys come from the environment only.
 """
 
-from __future__ import annotations
-
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any

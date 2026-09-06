@@ -76,13 +76,18 @@ optimize it away, flag it and ask instead.
 
 ## Stack
 
-- Python 3.12, `pyproject.toml`, `uv`. I use pyenv.
+- Python 3.14, `pyproject.toml`, `uv`. I use pyenv.
 - OpenRouter for LLM *and* image generation — one key, one client.
 - ElevenLabs for TTS.
-- Keys from env only: `OPENROUTER_API_KEY`, `ELEVENLABS_API_KEY`. Never
-  committed, never logged. Ship `.env.example`.
-- Config in `config.yaml`: language, deck name, model/deck IDs, voice IDs,
-  model slugs, style directives.
+- Keys and voice IDs from env only: `OPENROUTER_API_KEY`,
+  `ELEVENLABS_API_KEY`, `ELEVENLABS_MALE_VOICE_ID`,
+  `ELEVENLABS_FEMALE_VOICE_ID`. Never committed, never logged. Ship
+  `.env.example`.
+- Config in `config.yaml`: language, deck name, model/deck IDs, model slugs,
+  style directives.
+- Two TTS voices, one male and one female, split ~50-50 across the deck by
+  slug-hash parity. Speaker-marked entries carry both gender variants so the
+  text can follow the assigned voice.
 
 **Model names churn.** Verify current OpenRouter model slugs against
 openrouter.ai before relying on any default. Do not trust training data for
